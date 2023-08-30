@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace UniLib
+namespace UniLib.Log
 {
     /// <summary>
     /// 拡張ログ基底クラス
@@ -9,6 +9,12 @@ namespace UniLib
     public abstract class LogHandlerBase : ILogHandler
     {
         private readonly ILogHandler _logHandler;
+        protected ILogHandler ParentHandler => _logHandler;
+
+        /// <summary>
+        /// 自動でデフォルトのログ出力を呼ぶか
+        /// </summary>
+        protected virtual bool EnableAutoParent { get; } = true;
 
         public LogHandlerBase(ILogHandler logHandler)
         {
@@ -18,21 +24,21 @@ namespace UniLib
         public void LogException(Exception exception, UnityEngine.Object context)
         {
             OnExceptionLog(exception);
-            _logHandler.LogException(exception, context);
+            if (EnableAutoParent) _logHandler.LogException(exception, context);
         }
 
         public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args)
         {
-            string formated = string.Format($"[{logType}] {format}", args);
-            OnFormatedLog(formated);
-            _logHandler.LogFormat(logType, context, formated);
+            string formated = string.Format(format, args);
+            OnFormatedLog(logType, formated);
+            if (EnableAutoParent) _logHandler.LogFormat(logType, context, formated);
         }
 
         /// <summary>
         /// フォーマット済ログを受け取る
         /// </summary>
         /// <param name="logString">埋め込みなどが終わった文字列</param>
-        protected abstract void OnFormatedLog(string logString);
+        protected abstract void OnFormatedLog(LogType logType, string logString);
 
         /// <summary>
         /// 例外ログを受け取る
@@ -66,7 +72,7 @@ namespace UniLib
         {
         }
 
-        protected override void OnFormatedLog(string logString)
+        protected override void OnFormatedLog(LogType logType, string logString)
         {
         }
 
