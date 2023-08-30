@@ -1,0 +1,8 @@
+{
+    "name": "jp.j-s.unilib",
+    "author": "juns",
+    "version": "0.0.1",
+    "displayName": "UniLib",
+    "description": "lib for unity",
+    "unity" : "2022.3"
+}
