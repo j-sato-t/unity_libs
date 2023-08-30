@@ -34,13 +34,13 @@ public class Log
     }
 
 
-    [TestCase(UniLib.Log.Logger.LogLevel.Trace)]
-    [TestCase(UniLib.Log.Logger.LogLevel.Debug)]
-    [TestCase(UniLib.Log.Logger.LogLevel.Info)]
-    [TestCase(UniLib.Log.Logger.LogLevel.Warning)]
-    [TestCase(UniLib.Log.Logger.LogLevel.Error)]
-    [TestCase(UniLib.Log.Logger.LogLevel.Critical)]
-    public void LoggerTest(UniLib.Log.Logger.LogLevel level)
+    [TestCase(UniLib.Log.LogLevel.Trace)]
+    [TestCase(UniLib.Log.LogLevel.Debug)]
+    [TestCase(UniLib.Log.LogLevel.Info)]
+    [TestCase(UniLib.Log.LogLevel.Warning)]
+    [TestCase(UniLib.Log.LogLevel.Error)]
+    [TestCase(UniLib.Log.LogLevel.Critical)]
+    public void LoggerTest(UniLib.Log.LogLevel level)
     {
         UniLib.Log.Logger logger = new UniLib.Log.Logger(level);
 
