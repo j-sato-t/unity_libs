@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace UniLib.Core
 {
@@ -20,12 +21,16 @@ namespace UniLib.Core
 
     public class Manageable
     {
-        private enum Condition
+        internal enum Condition
         {
             /// <summary>
             /// 生成された状態
             /// </summary>
             Created,
+            /// <summary>
+            /// 開始処理実行中
+            /// </summary>
+            Opening,
             /// <summary>
             /// 動作中
             /// </summary>
@@ -38,8 +43,15 @@ namespace UniLib.Core
             /// 終了済
             /// </summary>
             Finished,
+
+            /// <summary>
+            /// 失敗時
+            /// </summary>
+            Failed,
         }
         private Condition _condition;
+
+        internal Condition NowCondition { get => _condition; }
 
         /// <summary>
         /// このインスタンスで使うロガー
@@ -52,6 +64,14 @@ namespace UniLib.Core
         /// </summary>
         protected ManageableSetting Setting => _setting;
 
+        /// <summary>
+        /// 完了を待つ開始処理
+        /// <note>Finishedになるのを待つ</note>
+        /// </summary>
+        private List<Progressable> _openingAct = new List<Progressable>();
+
+
+        private List<Manageable> _autoCloser = new List<Manageable>();
 
         // ==================================
         /// <summary>
@@ -88,17 +108,57 @@ namespace UniLib.Core
                 Logger.LogError("call Open, but was opened");
                 return false;
             }
+            SetCondition(Condition.Opening);
 
-            if (OnOpen())
+            if (!OnOpen())
+            {
+                // 失敗が確定した場合
+                SetFailed();
+
+                return false;
+            }
+
+            if (_openingAct.Count == 0)
             {
                 SetCondition(Condition.Running);
                 return true;
             }
             else
             {
-                SetCondition(Condition.Finished);
-                Logger.LogError("fail Open");
-                return false;
+                // 待ち処理開始
+                foreach (var openAct in _openingAct)
+                {
+                    openAct.Open();
+                }
+
+                // 終了待機開始
+                SetAutoCloser(Polling.UniTaskPolling.Instantiate(new Polling.UniTaskPolling.UniTaskPollingSetting
+                {
+                    PollingAction = (delta) =>
+                    {
+                        int finished = 0;
+                        bool fail = false;
+                        foreach (var act in _openingAct)
+                        {
+                            if (act.NowCondition == Condition.Running) act.Update(delta);
+                            
+                            if (act.IsSuccess) finished++;
+                            else if (act.IsFail) fail = true;
+                        }
+                        if (fail)
+                        {
+                            SetFailed();
+                            return false;
+                        }
+                        else if (finished == _openingAct.Count) {
+                            SetCondition(Condition.Running);
+                            return false;
+                        }
+                        return true;
+                    }
+                }), true);
+
+                return true; // 開始自体は成功
             }
         }
 
@@ -162,6 +222,12 @@ namespace UniLib.Core
 
             OnClose();
 
+            // 自動終了
+            foreach (var manageable in _autoCloser)
+            {
+                manageable?.Close();
+            }
+
             SetCondition(Condition.Finished);
         }
 
@@ -195,6 +261,25 @@ namespace UniLib.Core
         {
             _condition = condition;
             Logger.LogTrace($"Set Condition: {_condition}");
+        }
+
+        protected void SetFailed()
+        {
+            SetCondition(Condition.Failed);
+        }
+
+        // ----------------------------
+
+        /// <summary>
+        /// Close時に自動でCloseを呼ぶものとして登録する
+        /// </summary>
+        /// <param name="target">自動でCloseを呼びたい Manageable</param>
+        /// <param name="autoStart">登録時にOpenを呼ぶか</param>
+        protected void SetAutoCloser(Manageable target, bool autoStart = false)
+        {
+            if (target == null) return;
+            _autoCloser.Add(target);
+            if (autoStart) target.Open();
         }
 
     }
