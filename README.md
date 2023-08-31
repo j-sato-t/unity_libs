@@ -67,6 +67,7 @@ package Core{
         - Logger _logger
         # Logger Logger{get}
         - List<Manageable> _autoCloser
+        - Task.MultiTaskWaiter _openingActor
 
 
         + {static} Manageable Instantiate(Setting setting)
@@ -86,9 +87,14 @@ package Core{
     Manageable o-- Logger
     ManageableSetting --* Manageable
     ITickable <|.. Manageable
+    Manageable o-- UniLib.Task.MultiTaskWaiter
 
     interface ITickable{
         + void Update(float deltaMs)
+    }
+
+    class Checker{
+        + {static} bool NoNullAll(params object[] target)
     }
 }
 
@@ -112,6 +118,33 @@ package Task {
     }
 }
 
+package Sequence{
+    class State{
+        - UnityEvent<State> OnNextState
+        - UnityEvent<State> OnPushState
+        - UnityEvent OnFinishState
+
+        # void NextState(State nextState)
+        # void PushState(State childState)
+        # void EndState()
+    }
+    State --|> Manageable
+
+    class StateMachine{
+        - Stack<State> _stateStack
+        
+        - void OnNextState(State nextState)
+        - void OnPushState(State pushState)
+        - void OnFinishState()
+    }
+    StateMachine --|> Manageable
+
+    StateMachine "1" o-- "n" State
+}
+
+
+
+
 
 
 
@@ -123,40 +156,5 @@ package Task {
 
 
 }
-@enduml
-```
-
-```puml
-@startuml wait_opening
-
-participant Manageable as mana
-collections Progressable as prog
-collections WaitTarget as wait
-
-activate mana
-    mana->>wait:生成
-    mana->>prog:生成
-    mana-->>prog:待機開始
-    activate prog
-        prog-->>wait:処理開始
-        loop 周期処理
-            prog->>wait:状態確認
-            alt 終了
-                prog->>prog:Close
-            else 失敗
-                prog->>prog:SetFail
-            end
-        end
-    deactivate prog
-    loop 周期処理
-        mana->>prog:状態確認
-        alt すべて成功
-            mana->>mana:toRunning
-        else 失敗 > 0
-            mana->>mana:SetFail
-        end
-    end
-deactivate mana
-
 @enduml
 ```
