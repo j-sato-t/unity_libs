@@ -66,37 +66,30 @@ package Core{
         + Condition NowCondition{get}
         - Logger _logger
         # Logger Logger{get}
-        - List<Progressable> _openingAct
+        - List<Manageable> _autoCloser
 
 
         + {static} Manageable Instantiate(Setting setting)
-        + void Open()
+        + bool Open()
         + bool Pause()
         + bool Resume()
         + void Close()
-        + {virtual} void OnOpen()
+        + {virtual} bool OnOpen()
+        + {virtual} void OnReady()
         + {virtual} bool OnPause()
         + {virtual} bool OnResume()
         + {virtual} void OnClose()
-        # void SetFail()
+        # void SetFailed()
+        # void SetAutoCloser(Manageable target, bool autoStart)
     }
     Manageable *-- Condition
     Manageable o-- Logger
     ManageableSetting --* Manageable
+    ITickable <|.. Manageable
 
     interface ITickable{
         + void Update(float deltaMs)
     }
-
-    class Progressable{
-        # Manageable Setting.WaitTarget
-        + bool IsFail{get}
-        + bool IsSuccess{get}
-    }
-    Manageable <|-- Progressable
-    ITickable <|.. Progressable
-    Manageable "1" --o "1" Progressable
-    Manageable "1" o-- "n" Progressable
 }
 
 package Polling{
@@ -106,6 +99,17 @@ package Polling{
         - UniTask TickLoop()
     }
     Manageable <|-- UniTaskPolling
+}
+
+package Task {
+    class MultiTaskWaiter {
+        - List<HandleableDelegate> _taskMethodList
+
+        + void AddTask(HandleableDelegate taskMethod)
+        + void StartWait(UnityAction<bool> resultCB)
+        + UniTask<bool> StartWaitAsync()
+        - UniTask RunTask(HandledDelegate taskMethod)
+    }
 }
 
 

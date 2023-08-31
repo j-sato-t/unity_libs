@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Cysharp.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace UniLib.Core
@@ -16,10 +18,15 @@ namespace UniLib.Core
         /// ログにつけるタグ（空だとクラス名になる）
         /// </summary>
         public string LogNameTag = "";
+
+        /// <summary>
+        /// 独自にUniTaskでUpdateを呼ぶか
+        /// </summary>
+        public bool SelfTick = false;
     }
 
 
-    public class Manageable
+    public class Manageable : ITickable
     {
         internal enum Condition
         {
@@ -52,6 +59,7 @@ namespace UniLib.Core
         private Condition _condition;
 
         internal Condition NowCondition { get => _condition; }
+        public bool IsRunning { get => _condition == Condition.Running; }
 
         /// <summary>
         /// このインスタンスで使うロガー
@@ -64,13 +72,12 @@ namespace UniLib.Core
         /// </summary>
         protected ManageableSetting Setting => _setting;
 
+        private Task.MultiTaskWaiter _openingActor;
+
+
         /// <summary>
-        /// 完了を待つ開始処理
-        /// <note>Finishedになるのを待つ</note>
+        /// 自身のClose時にCloseを呼ぶリスト
         /// </summary>
-        private List<Progressable> _openingAct = new List<Progressable>();
-
-
         private List<Manageable> _autoCloser = new List<Manageable>();
 
         // ==================================
@@ -110,6 +117,8 @@ namespace UniLib.Core
             }
             SetCondition(Condition.Opening);
 
+            _openingActor = new Task.MultiTaskWaiter();
+
             if (!OnOpen())
             {
                 // 失敗が確定した場合
@@ -118,48 +127,33 @@ namespace UniLib.Core
                 return false;
             }
 
-            if (_openingAct.Count == 0)
+            // 自己Tick開始
+            if (Setting.SelfTick)
             {
-                SetCondition(Condition.Running);
+                SelfTick().Forget();
+            }
+
+            // 開始処理の待機
+            if (_openingActor.HasTask)
+            {
+                _openingActor.StartWait(result =>
+                {
+                    if (result)
+                    {
+                        OnReady();
+                        SetCondition(Condition.Running);
+                    }
+                    else
+                    {
+                        SetFailed();
+                    }
+                });
                 return true;
             }
-            else
-            {
-                // 待ち処理開始
-                foreach (var openAct in _openingAct)
-                {
-                    openAct.Open();
-                }
 
-                // 終了待機開始
-                SetAutoCloser(Polling.UniTaskPolling.Instantiate(new Polling.UniTaskPolling.UniTaskPollingSetting
-                {
-                    PollingAction = (delta) =>
-                    {
-                        int finished = 0;
-                        bool fail = false;
-                        foreach (var act in _openingAct)
-                        {
-                            if (act.NowCondition == Condition.Running) act.Update(delta);
-                            
-                            if (act.IsSuccess) finished++;
-                            else if (act.IsFail) fail = true;
-                        }
-                        if (fail)
-                        {
-                            SetFailed();
-                            return false;
-                        }
-                        else if (finished == _openingAct.Count) {
-                            SetCondition(Condition.Running);
-                            return false;
-                        }
-                        return true;
-                    }
-                }), true);
-
-                return true; // 開始自体は成功
-            }
+            OnReady();
+            SetCondition(Condition.Running);
+            return true;
         }
 
         /// <summary>
@@ -239,6 +233,11 @@ namespace UniLib.Core
         protected virtual bool OnOpen() { return true; }
 
         /// <summary>
+        /// 開始処理が完了した際に呼ばれる
+        /// </summary>
+        protected virtual void OnReady() { }
+
+        /// <summary>
         /// 中断処理
         /// </summary>
         /// <returns>成功したか</returns>
@@ -254,6 +253,25 @@ namespace UniLib.Core
         /// 終了処理
         /// </summary>
         protected virtual void OnClose() { }
+
+        public virtual void Update(float deltaMs) { }
+
+        private async UniTask SelfTick()
+        {
+            await UniTask.WaitUntil(() => NowCondition == Condition.Running);
+
+            DateTime befor, after;
+            TimeSpan delta;
+            while (true)
+            {
+                befor = DateTime.Now;
+                await UniTask.NextFrame();
+                if (NowCondition != Condition.Running) break;
+                after = DateTime.Now;
+                delta = after - befor;
+                Update((float)delta.TotalMilliseconds);
+            }
+        }
 
         // ----------------------------
 
@@ -271,6 +289,18 @@ namespace UniLib.Core
         // ----------------------------
 
         /// <summary>
+        /// 待機が必要な開始処理を登録する
+        /// </summary>
+        /// <param name="handleableTask">実行したいタスクのメソッド</param>
+        protected void AddOpeningAct(Task.MultiTaskWaiter.HandleableTaskDelegate handleableTask)
+        {
+            if (_openingActor == null) _openingActor = new Task.MultiTaskWaiter();
+            _openingActor.AddTask(handleableTask);
+        }
+
+        // ----------------------------
+
+        /// <summary>
         /// Close時に自動でCloseを呼ぶものとして登録する
         /// </summary>
         /// <param name="target">自動でCloseを呼びたい Manageable</param>
@@ -281,6 +311,5 @@ namespace UniLib.Core
             _autoCloser.Add(target);
             if (autoStart) target.Open();
         }
-
     }
 }
