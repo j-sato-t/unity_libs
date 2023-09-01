@@ -122,11 +122,12 @@ package Sequence{
     class State{
         - UnityEvent<State> OnNextState
         - UnityEvent<State> OnPushState
-        - UnityEvent OnFinishState
+        - UnityEvent OnEndState
 
         # void NextState(State nextState)
         # void PushState(State childState)
         # void EndState()
+        + void SetupCallback(UnityAction<State> onNext, onPush, UnityAction onEnd)
     }
     State --|> Manageable
 
@@ -140,6 +141,17 @@ package Sequence{
     StateMachine --|> Manageable
 
     StateMachine "1" o-- "n" State
+
+    package Test{
+        class StateStub{
+            - UnityAction<TestResult> Setting.ResultCallback
+            - void OnNext(State state)
+            - void OnPush(State state)
+            - UniTask DelayResume()
+        }
+        StateStub --|> Manageable
+        StateStub "1" o-- "1" State
+    }
 }
 
 

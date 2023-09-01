@@ -60,6 +60,9 @@ namespace UniLib.Core
 
         internal Condition NowCondition { get => _condition; }
         public bool IsRunning { get => _condition == Condition.Running; }
+        public bool IsFailed { get => _condition == Condition.Failed; }
+
+        public bool IsEndOpen { get => _condition >= Condition.Running; }
 
         /// <summary>
         /// このインスタンスで使うロガー
@@ -140,8 +143,8 @@ namespace UniLib.Core
                 {
                     if (result)
                     {
-                        OnReady();
                         SetCondition(Condition.Running);
+                        OnReady();
                     }
                     else
                     {
@@ -151,8 +154,8 @@ namespace UniLib.Core
                 return true;
             }
 
-            OnReady();
             SetCondition(Condition.Running);
+            OnReady();
             return true;
         }
 
