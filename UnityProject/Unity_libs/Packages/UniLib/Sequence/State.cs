@@ -48,7 +48,7 @@ namespace UniLib.Sequence
             }
 
             Logger.LogTrace($"Call PushState: {state.GetType()}");
-            _onNextState.Invoke(state);
+            _onPushState.Invoke(state);
         }
 
         protected void EndState()

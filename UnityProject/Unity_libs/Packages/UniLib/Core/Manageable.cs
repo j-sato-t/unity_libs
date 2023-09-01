@@ -154,6 +154,7 @@ namespace UniLib.Core
                 return true;
             }
 
+            // 待機がなければ即座に完了
             SetCondition(Condition.Running);
             OnReady();
             return true;
@@ -191,14 +192,14 @@ namespace UniLib.Core
                 return false;
             }
 
+            SetCondition(Condition.Running);
             if (OnResume())
             {
-                SetCondition(Condition.Running);
                 return true;
             }
             else
             {
-                SetCondition(Condition.Finished);
+                SetFailed();
                 Logger.LogError("fail Resume");
                 return false;
             }
@@ -217,6 +218,8 @@ namespace UniLib.Core
                 return;
             }
 
+            SetCondition(Condition.Finished);
+
             OnClose();
 
             // 自動終了
@@ -224,8 +227,6 @@ namespace UniLib.Core
             {
                 manageable?.Close();
             }
-
-            SetCondition(Condition.Finished);
         }
 
         // ----------------------------
@@ -257,7 +258,17 @@ namespace UniLib.Core
         /// </summary>
         protected virtual void OnClose() { }
 
-        public virtual void Update(float deltaMs) { }
+        protected virtual void OnUpdate(float deltaMs) { }
+
+        /// <summary>
+        /// 周期処理の呼び出し（外部からでも呼べる）
+        /// </summary>
+        /// <param name="deltaMs">フレーム経過時間（ミリ秒を想定している）</param>
+        public void Update(float deltaMs) 
+        {
+            if (!IsRunning) return;
+            OnUpdate(deltaMs);
+        }
 
         private async UniTask SelfTick()
         {

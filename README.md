@@ -136,7 +136,7 @@ package Sequence{
         
         - void OnNextState(State nextState)
         - void OnPushState(State pushState)
-        - void OnFinishState()
+        - void OnEndState()
     }
     StateMachine --|> Manageable
 
