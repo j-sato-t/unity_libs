@@ -1,5 +1,14 @@
 # unity_libs
 
+## 依存
+- 先にインポートが必要
+- UniTask
+  - https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask
+
+## インポート
+- githubから取得する
+  - https://github.com/j-sato-t/unity_libs.git?path=UnityProject/Unity_libs/Packages/UniLib
+
 ```puml
 @startuml class_map
 

@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.cysharp.unitask": {
+      "version": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "4c3d6938edef1ebc4d8c0fb5b9245cd3d219d45e"
+    },
     "com.unity.collab-proxy": {
       "version": "2.0.5",
       "depth": 0,
@@ -134,6 +141,15 @@
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"
+    },
+    "jp.juns.msk76.unilib": {
+      "version": "https://github.com/j-sato-t/unity_libs.git?path=UnityProject/Unity_libs/Packages/UniLib",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.cysharp.unitask": "2.3.3"
+      },
+      "hash": "b4693fadca8fdfae6304f206dda05a1371dbdbd3"
     },
     "com.unity.modules.ai": {
       "version": "1.0.0",
